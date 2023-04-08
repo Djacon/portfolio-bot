@@ -1,0 +1,8 @@
+# VisualStudioCode
+.vscode
+
+# Pycache
+__pycache__
+
+# Database
+models.json
