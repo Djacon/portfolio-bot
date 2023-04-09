@@ -13,4 +13,4 @@ Telegram bot also contains such well-known technologies as Natural Language Proc
 2. ...
 
 ### How to get access to this bot:
-You can test this bot at this link - t.me/DjaconBot
+You can test this bot at this link - [@DjaconBot](https://t.me/DjaconBot)
