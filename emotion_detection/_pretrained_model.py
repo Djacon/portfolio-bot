@@ -9,21 +9,6 @@ LABELS = ['радость', 'интерес', 'удивление', 'печал�
           'страх', 'вина', 'нейтрально']
 
 
-# Predicting emotion in text
-@torch.no_grad()
-def predict_emotion(text):
-    inputs = tokenizer(text, max_length=512, truncation=True,
-                       return_tensors='pt')
-    inputs = inputs.to(model.device)
-
-    outputs = model(**inputs)
-
-    pred = torch.nn.functional.softmax(outputs.logits, dim=1)
-    pred = pred.argmax(dim=1)
-
-    return LABELS[pred[0]]
-
-
 # Probabilistic prediction of emotion in a text
 @torch.no_grad()
 def predict_emotions(text):

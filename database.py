@@ -1,7 +1,5 @@
 import json
 
-DEFAULT = 'https://getcourse.ru/'
-
 
 class MODELS:
     def __init__(self, filename: str):
@@ -17,7 +15,7 @@ class MODELS:
     def addCourse(self):
         index = len(self._models) + 1
         self._models.append([f'Нейросеть {index}', 'Здесь будет расположено'
-                             f' описание {index}-й Модели', DEFAULT])
+                             f' описание {index}-й Модели'])
         self._save()
 
     def getCourses(self):

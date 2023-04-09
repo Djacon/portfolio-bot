@@ -6,8 +6,7 @@ from database import DB
 
 def getCourseKeyboard(i: int, isAdmin: bool):
     sub = InlineKeyboardButton('✍ Воспользоваться нейросетью',
-                               callback_data=f'subscribe-{i}',
-                               url=DB.getCourse(i)[2])
+                               callback_data=f'open-{i}')
     back = InlineKeyboardButton('⬅ Назад', callback_data='courses')
     homepage = InlineKeyboardButton('🏠 На главную', callback_data='homepage')
     courses_keyboard = InlineKeyboardMarkup(resize_keyboard=True)
@@ -36,14 +35,12 @@ def getEditCourseKeyboard(i: int):
                                  callback_data=f'title-{i}')
     desc = InlineKeyboardButton('Изменить описание',
                                 callback_data=f'description-{i}')
-    src = InlineKeyboardButton('Изменить ссылку',
-                               callback_data=f'source-{i}')
     delete = InlineKeyboardButton('❌ Удалить нейросеть',
                                   callback_data=f'delete-{i}')
     back = InlineKeyboardButton('⬅ Назад', callback_data=f'course-{i}')
     homepage = InlineKeyboardButton('🏠 На главную', callback_data='homepage')
     courses_keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=1)
-    return courses_keyboard.add(title, desc, src, delete).row(back, homepage)
+    return courses_keyboard.add(title, desc, delete).row(back, homepage)
 
 
 def getDeleteKeyboard(i: int):
@@ -65,5 +62,8 @@ mainKb = InlineKeyboardMarkup(resize_keyboard=True).add(mainKb)
 
 cancelKb = KeyboardButton('Отмена')
 cancelKb = ReplyKeyboardMarkup(resize_keyboard=True).add(cancelKb)
+
+exitKb = KeyboardButton('Выход')
+exitKb = ReplyKeyboardMarkup(resize_keyboard=True).add(exitKb)
 
 noneKb = ReplyKeyboardRemove()

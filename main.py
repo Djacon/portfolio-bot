@@ -6,60 +6,72 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from emotion_detection import predict_emotions
 
-from re import match
 from os import environ
 from keyboards import *
 
+# Токен для получения доступа к боту
 TOKEN = environ['TOKEN']
 
+# Класс для работы с Ботом
 bot = Bot(TOKEN)
 
+# Создание хранилища для состояний сцен
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 
-class Course(StatesGroup):
+# Сцена Модели (для редактирования заголовка и описания)
+class ModelEdit(StatesGroup):
     index = State()
     title = State()
-    source = State()
     description = State()
 
 
+# Сцена Модели (для запуска определенной модели)
+class ModelPlay(StatesGroup):
+    emotion = State()
+    # test = State()  # тестовое состояние (временно)
+
+
+# Игнорирование ошибки при неизмененном сообщении
 @dp.errors_handler(exception=MessageNotModified)
 async def message_not_modified_handler(*_):
     return True
 
 
+# Приветственное сообщение для команды /start
 def greet(user: int) -> str:
     return (f'Приветствую вас, {user}!\n\nВыберите любую нейросеть из моего '
             'портфолио, и я помогу вам протестировать ее работу:')
 
 
+# Проверить имеет ли пользователь права Администратора
 def isAdmin(message) -> bool:
     return message.from_user.id in [915782472]
 
 
+# Стандартная команда /start для начала работы с ботом
 @dp.message_handler(commands=['start'])
 async def start(message: Message):
     user = message.from_user.first_name
     await message.answer(greet(user), reply_markup=mainKb)
 
 
-@dp.message_handler(commands='test')
-async def echo(message: Message):
-    text = message.text[6:]
-    if not len(text):
-        await message.answer('Некорректный ввод!')
-        return
+# Запуск выбранной нейросети
+@dp.callback_query_handler(lambda c: c.data.startswith('open'))
+async def show_editTitle(call):
+    message = call.message
+    index = int(call.data.split('-')[1])
+    if index == 0:  # Emotion detection
+        await message.delete()
+        await bot.answer_callback_query(call.id)
+        await message.answer('Введите текст:', reply_markup=exitKb)
+        await ModelPlay.emotion.set()
+    else:
+        await message.answer('Временно недоступно :(')
 
-    emotion = predict_emotions(text).items()
 
-    answer = '```\nПрогноз:'
-    for k, v in sorted(emotion, key=lambda x: x[1], reverse=True):
-        answer += f"\n{k}:{' '*(11-len(k))}{100*v:.3f}%"
-    await message.answer(answer + '```', parse_mode='Markdown')
-
-
+# Вывод отредактированной нейросети
 @dp.callback_query_handler(lambda c: c.data.startswith('editCourse'))
 async def show_editCourse(call):
     message = call.message
@@ -68,9 +80,11 @@ async def show_editCourse(call):
     await message.edit_text(
         f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
         f'{DB.getCourse(index)[1]}',
-        reply_markup=getEditCourseKeyboard(index))
+        reply_markup=getEditCourseKeyboard(index),
+        disable_web_page_preview=True)
 
 
+# Вывод окна для редактирования заголовка или описания нейросети
 async def show_edit(call, text):
     message = call.message
     ind = int(call.data.split('-')[1])
@@ -82,25 +96,21 @@ async def show_edit(call, text):
     await call.message.answer(text, reply_markup=cancelKb)
 
 
+# Вывод окна для редактировании заголовка
 @dp.callback_query_handler(lambda c: c.data.startswith('title'))
 async def show_editTitle(call):
     await show_edit(call, 'Введите новый заголовок:')
-    await Course.title.set()
+    await ModelEdit.title.set()
 
 
+# Вывод окна для редактирования описания
 @dp.callback_query_handler(lambda c: c.data.startswith('description'))
 async def show_editDesc(call):
     await show_edit(call, 'Введите новое описание:')
-    await Course.description.set()
+    await ModelEdit.description.set()
 
 
-@dp.callback_query_handler(lambda c: c.data.startswith('source'))
-async def show_editSource(call):
-    await show_edit(call, 'Введите новую ссылку\n'
-                    '(ссылка должна быть в формате https://site.ru):')
-    await Course.source.set()
-
-
+# Изменение заголовка и описания нейросети
 async def editCourse(message, state, id):
     async with state.proxy() as data:
         index = data['index']
@@ -115,28 +125,46 @@ async def editCourse(message, state, id):
     await message.answer(
         f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
         f'{DB.getCourse(index)[1]}',
-        reply_markup=getEditCourseKeyboard(index))
+        reply_markup=getEditCourseKeyboard(index),
+        disable_web_page_preview=True)
 
 
-@dp.message_handler(state=Course.title)
+# Сцена для редактирования заголовка
+@dp.message_handler(state=ModelEdit.title)
 async def editTitle(message: Message, state):
     await editCourse(message, state, 0)
 
 
-@dp.message_handler(state=Course.description)
+# Сцена для редактирования описания
+@dp.message_handler(state=ModelEdit.description)
 async def editDesc(message: Message, state):
     await editCourse(message, state, 1)
 
 
-@dp.message_handler(state=Course.source)
-async def editSource(message: Message, state):
-    if message.text.lower() == 'отмена' or \
-     match(r'^https?:\/\/(www\.)?\w+\.\w+', message.text):
-        await editCourse(message, state, 2)
-    else:
-        await message.answer('Некорректная ссылка!')
+# Сцена для тестирования emotion_detection модели
+@dp.message_handler(state=ModelPlay.emotion)
+async def playEmotion(message: Message, state):
+    text = message.text
+
+    if text.lower() in ['выход', '/start']:
+        await state.finish()
+        await message.answer('Выход в Главное меню', reply_markup=noneKb)
+        user = message.from_user.first_name
+        return await message.answer(greet(user), reply_markup=mainKb)
+        # return await message.answer(
+        #     'Список нейросетей:\n\n' +
+        #     '\n\n'.join([f"{i+1}. {x[0]}"
+        #                  for i, x in enumerate(DB.getCourses())]),
+        #     reply_markup=getCoursesKeyboard(isAdmin(message)))
+
+    emotion = predict_emotions(text).items()
+    answer = '```\nПрогноз:'
+    for k, v in sorted(emotion, key=lambda x: x[1], reverse=True):
+        answer += f"\n-{k}:{' '*(11-len(k))}{100*v:.3f}%"
+    await message.answer(answer + '```', parse_mode='Markdown')
 
 
+# Вывод страницы выбранной модели
 @dp.callback_query_handler(lambda c: c.data.startswith('course-'))
 async def show_course(call):
     message = call.message
@@ -145,9 +173,11 @@ async def show_course(call):
     await message.edit_text(
         f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
         f'{DB.getCourse(index)[1]}',
-        reply_markup=getCourseKeyboard(index, isAdmin(call)))
+        reply_markup=getCourseKeyboard(index, isAdmin(call)),
+        disable_web_page_preview=True)
 
 
+# Вывод списка имеющихся нейросетей
 async def courses_page(call):
     message = call.message
     await bot.answer_callback_query(call.id)
@@ -157,6 +187,7 @@ async def courses_page(call):
         reply_markup=getCoursesKeyboard(isAdmin(call)))
 
 
+# Окно для создания новой страницы для модели
 @dp.callback_query_handler(lambda c: c.data == 'add')
 async def show_add(call):
     message = call.message
@@ -165,12 +196,14 @@ async def show_add(call):
                             reply_markup=addKb)
 
 
+# Добавление новой страницы модели
 @dp.callback_query_handler(lambda c: c.data == 'add_surely')
 async def show_add(call):
     DB.addCourse()
     await courses_page(call)
 
 
+# Удаление страницы с моделью
 @dp.callback_query_handler(lambda c: c.data.startswith('delete_surely'))
 async def show_delete(call):
     index = int(call.data.split('-')[1])
@@ -178,6 +211,7 @@ async def show_delete(call):
     await courses_page(call)
 
 
+# Окно для удаления страницы модели
 @dp.callback_query_handler(lambda c: c.data.startswith('delete'))
 async def show_delete(call):
     message = call.message
@@ -187,11 +221,13 @@ async def show_delete(call):
                             reply_markup=getDeleteKeyboard(index))
 
 
+# Вывод списка имеющихся нейросетей
 @dp.callback_query_handler(lambda c: c.data == 'courses')
 async def show_courses(call):
     await courses_page(call)
 
 
+# Вернуться главную страницу /start
 @dp.callback_query_handler(lambda c: c.data == 'homepage')
 async def show_homepage(call):
     user = call.from_user.first_name
@@ -199,5 +235,6 @@ async def show_homepage(call):
     await call.message.edit_text(greet(user), reply_markup=mainKb)
 
 
+# Запуск бота
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
