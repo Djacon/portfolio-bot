@@ -151,11 +151,6 @@ async def playEmotion(message: Message, state):
         await message.answer('Выход в Главное меню', reply_markup=noneKb)
         user = message.from_user.first_name
         return await message.answer(greet(user), reply_markup=mainKb)
-        # return await message.answer(
-        #     'Список нейросетей:\n\n' +
-        #     '\n\n'.join([f"{i+1}. {x[0]}"
-        #                  for i, x in enumerate(DB.getCourses())]),
-        #     reply_markup=getCoursesKeyboard(isAdmin(message)))
 
     emotion = predict_emotions(text).items()
     answer = '```\nПрогноз:'
