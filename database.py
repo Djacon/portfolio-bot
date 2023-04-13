@@ -12,23 +12,23 @@ class MODELS:
             with open(filename, 'w') as f:
                 f.write('[]')
 
-    def addCourse(self):
+    def addModel(self):
         index = len(self._models) + 1
         self._models.append([f'Нейросеть {index}', 'Здесь будет расположено'
                              f' описание {index}-й Модели'])
         self._save()
 
-    def getCourses(self):
+    def getModels(self):
         return self._models
 
-    def getCourse(self, id: int):
+    def getModel(self, id: int):
         return self._models[id]
 
-    def editCourse(self, id: int, index: int, value: str):
+    def editModel(self, id: int, index: int, value: str):
         self._models[id][index] = value
         self._save()
 
-    def deleteCourse(self, index: int):
+    def deleteModel(self, index: int):
         self._models.pop(index)
         self._save()
 

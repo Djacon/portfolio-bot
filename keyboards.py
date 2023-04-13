@@ -4,60 +4,60 @@ from aiogram.types import ReplyKeyboardRemove
 from database import DB
 
 
-def getCourseKeyboard(i: int, isAdmin: bool):
+def getModelKeyboard(i: int, isAdmin: bool):
     sub = InlineKeyboardButton('✍ Воспользоваться нейросетью',
                                callback_data=f'open-{i}')
-    back = InlineKeyboardButton('⬅ Назад', callback_data='courses')
+    back = InlineKeyboardButton('⬅ Назад', callback_data='models')
     homepage = InlineKeyboardButton('🏠 На главную', callback_data='homepage')
-    courses_keyboard = InlineKeyboardMarkup(resize_keyboard=True)
+    models_keyboard = InlineKeyboardMarkup(resize_keyboard=True)
     if not isAdmin:
-        return courses_keyboard.add(sub).row(back, homepage)
+        return models_keyboard.add(sub).row(back, homepage)
     edit = InlineKeyboardButton('Отредактировать',
-                                callback_data=f'editCourse-{i}')
-    return courses_keyboard.add(sub).row(edit).row(back, homepage)
+                                callback_data=f'editModel-{i}')
+    return models_keyboard.add(sub).row(edit).row(back, homepage)
 
 
-def getCoursesKeyboard(isAdmin: bool):
-    courses = []
-    for i, x in enumerate(DB.getCourses()):
-        courses.append(InlineKeyboardButton(f"{i+1}. {x[0]}",
-                       callback_data=f'course-{i}'))
+def getModelsKeyboard(isAdmin: bool):
+    models = []
+    for i, x in enumerate(DB.getModels()):
+        models.append(InlineKeyboardButton(f"{i+1}. {x[0]}",
+                      callback_data=f'model-{i}'))
     homepage = InlineKeyboardButton('🏠 На главную', callback_data='homepage')
-    courses_keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=2)
+    models_keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=2)
     if not isAdmin:
-        return courses_keyboard.add(*courses).row(homepage)
+        return models_keyboard.add(*models).row(homepage)
     add = InlineKeyboardButton('✅ Добавить нейросеть', callback_data='add')
-    return courses_keyboard.add(*courses).row(add).row(homepage)
+    return models_keyboard.add(*models).row(add).row(homepage)
 
 
-def getEditCourseKeyboard(i: int):
+def getEditModelKeyboard(i: int):
     title = InlineKeyboardButton('Изменить заголовок',
                                  callback_data=f'title-{i}')
     desc = InlineKeyboardButton('Изменить описание',
                                 callback_data=f'description-{i}')
     delete = InlineKeyboardButton('❌ Удалить нейросеть',
                                   callback_data=f'delete-{i}')
-    back = InlineKeyboardButton('⬅ Назад', callback_data=f'course-{i}')
+    back = InlineKeyboardButton('⬅ Назад', callback_data=f'model-{i}')
     homepage = InlineKeyboardButton('🏠 На главную', callback_data='homepage')
-    courses_keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=1)
-    return courses_keyboard.add(title, desc, delete).row(back, homepage)
+    models_keyboard = InlineKeyboardMarkup(resize_keyboard=True, row_width=1)
+    return models_keyboard.add(title, desc, delete).row(back, homepage)
 
 
 def getDeleteKeyboard(i: int):
     yes = InlineKeyboardButton('Да', callback_data=f'delete_surely-{i}')
-    no = InlineKeyboardButton('Нет', callback_data=f'editCourse-{i}')
+    no = InlineKeyboardButton('Нет', callback_data=f'editModel-{i}')
     return InlineKeyboardMarkup(resize_keyboard=True).add(yes, no)
 
 
 def getAddKeyboard():
     yes = InlineKeyboardButton('Да', callback_data='add_surely')
-    no = InlineKeyboardButton('Нет', callback_data='courses')
+    no = InlineKeyboardButton('Нет', callback_data='models')
     return InlineKeyboardMarkup(resize_keyboard=True).add(yes, no)
 
 
 addKb = getAddKeyboard()
 
-mainKb = InlineKeyboardButton('Показать нейросети', callback_data='courses')
+mainKb = InlineKeyboardButton('Показать нейросети', callback_data='models')
 mainKb = InlineKeyboardMarkup(resize_keyboard=True).add(mainKb)
 
 cancelKb = KeyboardButton('Отмена')

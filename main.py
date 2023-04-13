@@ -22,15 +22,15 @@ dp = Dispatcher(bot, storage=storage)
 
 # Сцена Модели (для редактирования заголовка и описания)
 class ModelEdit(StatesGroup):
-    index = State()
-    title = State()
-    description = State()
+    index = State()        # Индекс выбранной модели
+    title = State()        # Заголовок
+    description = State()  # Описание
 
 
 # Сцена Модели (для запуска определенной модели)
 class ModelPlay(StatesGroup):
-    emotion = State()
-    # test = State()  # тестовое состояние (временно)
+    emotion = State()      # Russian Emotion Detection
+    test = State()         # Тестовый (в случае если модель не задана)
 
 
 # Игнорирование ошибки при неизмененном сообщении
@@ -39,48 +39,55 @@ async def message_not_modified_handler(*_):
     return True
 
 
-# Приветственное сообщение для команды /start
-def greet(user: int) -> str:
-    return (f'Приветствую вас, {user}!\n\nВыберите любую нейросеть из моего '
-            'портфолио, и я помогу вам протестировать ее работу:')
-
-
 # Проверить имеет ли пользователь права Администратора
 def isAdmin(message) -> bool:
     return message.from_user.id in [915782472]
 
 
+# Показать главное меню
+async def show_homepage(call, is_edit=False):
+    user = call.from_user.first_name
+    greet = (f'Приветствую вас, {user}!\n\nВыберите любую нейросеть из моего '
+             'портфолио, и я помогу вам протестировать ее работу:')
+    if is_edit:
+        await bot.answer_callback_query(call.id)
+        return await call.message.edit_text(greet, reply_markup=mainKb)
+    await call.answer(greet, reply_markup=mainKb)
+
+
 # Стандартная команда /start для начала работы с ботом
 @dp.message_handler(commands=['start'])
 async def start(message: Message):
-    user = message.from_user.first_name
-    await message.answer(greet(user), reply_markup=mainKb)
+    await show_homepage(message)
 
 
 # Запуск выбранной нейросети
 @dp.callback_query_handler(lambda c: c.data.startswith('open'))
-async def show_editTitle(call):
+async def open_model_playground(call):
     message = call.message
     index = int(call.data.split('-')[1])
+
+    await message.delete()
+    await bot.answer_callback_query(call.id)
+
     if index == 0:  # Emotion detection
-        await message.delete()
-        await bot.answer_callback_query(call.id)
         await message.answer('Введите текст:', reply_markup=exitKb)
         await ModelPlay.emotion.set()
     else:
-        await message.answer('Временно недоступно :(')
+        await message.answer('Временно недоступно :(', reply_markup=exitKb)
+        await ModelPlay.test.set()
 
 
-# Вывод отредактированной нейросети
-@dp.callback_query_handler(lambda c: c.data.startswith('editCourse'))
-async def show_editCourse(call):
+# Вывод страницы редактирования нейросети
+@dp.callback_query_handler(lambda c: c.data.startswith('editModel'))
+async def show_editModel(call):
     message = call.message
     index = int(call.data.split('-')[1])
     await bot.answer_callback_query(call.id)
     await message.edit_text(
-        f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
-        f'{DB.getCourse(index)[1]}',
-        reply_markup=getEditCourseKeyboard(index),
+        f"Нейросеть: {DB.getModel(index)[0]}\n\n"
+        f'{DB.getModel(index)[1]}',
+        reply_markup=getEditModelKeyboard(index),
         disable_web_page_preview=True)
 
 
@@ -111,34 +118,34 @@ async def show_editDesc(call):
 
 
 # Изменение заголовка и описания нейросети
-async def editCourse(message, state, id):
+async def editModel(message, state, id):
     async with state.proxy() as data:
         index = data['index']
     await state.finish()
 
     if message.text.lower() != 'отмена':
-        DB.editCourse(index, id, message.text)
+        DB.editModel(index, id, message.text)
         await message.answer('Изменено', reply_markup=noneKb)
     else:
         await message.answer('Отменено', reply_markup=noneKb)
 
     await message.answer(
-        f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
-        f'{DB.getCourse(index)[1]}',
-        reply_markup=getEditCourseKeyboard(index),
+        f"Нейросеть: {DB.getModel(index)[0]}\n\n"
+        f'{DB.getModel(index)[1]}',
+        reply_markup=getEditModelKeyboard(index),
         disable_web_page_preview=True)
 
 
 # Сцена для редактирования заголовка
 @dp.message_handler(state=ModelEdit.title)
 async def editTitle(message: Message, state):
-    await editCourse(message, state, 0)
+    await editModel(message, state, 0)
 
 
 # Сцена для редактирования описания
 @dp.message_handler(state=ModelEdit.description)
 async def editDesc(message: Message, state):
-    await editCourse(message, state, 1)
+    await editModel(message, state, 1)
 
 
 # Сцена для тестирования emotion_detection модели
@@ -146,11 +153,10 @@ async def editDesc(message: Message, state):
 async def playEmotion(message: Message, state):
     text = message.text
 
-    if text.lower() in ['выход', '/start']:
+    if text.lower() in ('выход', '/start'):
         await state.finish()
         await message.answer('Выход в Главное меню', reply_markup=noneKb)
-        user = message.from_user.first_name
-        return await message.answer(greet(user), reply_markup=mainKb)
+        return await show_homepage(message)
 
     emotion = predict_emotions(text).items()
     answer = '```\nПрогноз:'
@@ -159,27 +165,36 @@ async def playEmotion(message: Message, state):
     await message.answer(answer + '```', parse_mode='Markdown')
 
 
+# Сцена для тестовой модели
+@dp.message_handler(state=ModelPlay.test)
+async def playEmotion(message: Message, state):
+    if message.text.lower() in ('выход', '/start'):
+        await state.finish()
+        await message.answer('Выход в Главное меню', reply_markup=noneKb)
+        return await show_homepage(message)
+
+
 # Вывод страницы выбранной модели
-@dp.callback_query_handler(lambda c: c.data.startswith('course-'))
-async def show_course(call):
+@dp.callback_query_handler(lambda c: c.data.startswith('model-'))
+async def show_model(call):
     message = call.message
     index = int(call.data.split('-')[1])
     await bot.answer_callback_query(call.id)
     await message.edit_text(
-        f"Нейросеть: {DB.getCourse(index)[0]}\n\n"
-        f'{DB.getCourse(index)[1]}',
-        reply_markup=getCourseKeyboard(index, isAdmin(call)),
+        f"Нейросеть: {DB.getModel(index)[0]}\n\n"
+        f'{DB.getModel(index)[1]}',
+        reply_markup=getModelKeyboard(index, isAdmin(call)),
         disable_web_page_preview=True)
 
 
 # Вывод списка имеющихся нейросетей
-async def courses_page(call):
+async def models_page(call):
     message = call.message
     await bot.answer_callback_query(call.id)
     await message.edit_text(
         'Список нейросетей:\n\n' +
-        '\n\n'.join([f"{i+1}. {x[0]}" for i, x in enumerate(DB.getCourses())]),
-        reply_markup=getCoursesKeyboard(isAdmin(call)))
+        '\n\n'.join([f"{i+1}. {x[0]}" for i, x in enumerate(DB.getModels())]),
+        reply_markup=getModelsKeyboard(isAdmin(call)))
 
 
 # Окно для создания новой страницы для модели
@@ -194,16 +209,16 @@ async def show_add(call):
 # Добавление новой страницы модели
 @dp.callback_query_handler(lambda c: c.data == 'add_surely')
 async def show_add(call):
-    DB.addCourse()
-    await courses_page(call)
+    DB.addModel()
+    await models_page(call)
 
 
 # Удаление страницы с моделью
 @dp.callback_query_handler(lambda c: c.data.startswith('delete_surely'))
 async def show_delete(call):
     index = int(call.data.split('-')[1])
-    DB.deleteCourse(index)
-    await courses_page(call)
+    DB.deleteModel(index)
+    await models_page(call)
 
 
 # Окно для удаления страницы модели
@@ -217,17 +232,15 @@ async def show_delete(call):
 
 
 # Вывод списка имеющихся нейросетей
-@dp.callback_query_handler(lambda c: c.data == 'courses')
-async def show_courses(call):
-    await courses_page(call)
+@dp.callback_query_handler(lambda c: c.data == 'models')
+async def show_models(call):
+    await models_page(call)
 
 
-# Вернуться главную страницу /start
+# Вернуться на главную страницу /start
 @dp.callback_query_handler(lambda c: c.data == 'homepage')
-async def show_homepage(call):
-    user = call.from_user.first_name
-    await bot.answer_callback_query(call.id)
-    await call.message.edit_text(greet(user), reply_markup=mainKb)
+async def back_to_homepage(call):
+    await show_homepage(call, is_edit=True)
 
 
 # Запуск бота
