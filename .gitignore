@@ -3,3 +3,10 @@
 
 # Pycache
 __pycache__
+
+# Model
+yolov8-seg.pt
+
+# Custom Folders
+photos/
+videos/

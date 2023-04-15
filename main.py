@@ -4,57 +4,13 @@ from imports import *
 
 from keyboards import *
 from admin import *
-
-from emotion_detection import predict_emotions
-
-
-NO_ROOT_MSG = ('Упс, похоже у вас недостаточно прав чтобы воспользоваться'
-               ' ботом, пожалуйста напишите @Djacon, чтобы получить'
-               ' доступ ко всевозможным функциям')
-
-
-# Показать главное меню
-async def show_homepage(call, is_edit=False):
-    user = call.from_user.first_name
-    greet = (f'Приветствую вас, {user}!\n\nВыберите любую нейросеть из моего '
-             'портфолио, и я помогу вам протестировать ее работу:')
-    if is_edit:
-        await bot.answer_callback_query(call.id)
-        return await call.message.edit_text(greet, reply_markup=mainKb)
-    await call.answer(greet, reply_markup=mainKb)
+from models import *
 
 
 # Стандартная команда /start для начала работы с ботом
 @dp.message_handler(commands=['start'])
 async def start(message: Message):
     await show_homepage(message)
-
-
-def userInDatabase(message) -> bool:
-    return True  # Временный доступ для всех пользователей
-    return message.from_user.id in USER_DB.getUsers()
-
-
-# Запуск выбранной нейросети
-@dp.callback_query_handler(lambda c: c.data.startswith('open'))
-async def open_model_playground(call):
-    message = call.message
-
-    index = int(call.data.split('-')[1])
-
-    await message.delete()
-    await bot.answer_callback_query(call.id)
-
-    if not userInDatabase(call):
-        await ModelPlay.test.set()
-        return await message.answer(NO_ROOT_MSG, reply_markup=exitKb)
-
-    if index == 0:  # Emotion detection
-        await message.answer('Введите текст:', reply_markup=exitKb)
-        await ModelPlay.emotion.set()
-    else:
-        await message.answer('Временно недоступно :(', reply_markup=exitKb)
-        await ModelPlay.test.set()
 
 
 # Вывод страницы редактирования нейросети
@@ -125,32 +81,6 @@ async def editTitle(message: Message, state):
 @dp.message_handler(state=ModelEdit.description)
 async def editDesc(message: Message, state):
     await editModel(message, state, 1)
-
-
-# Сцена для тестирования emotion_detection модели
-@dp.message_handler(state=ModelPlay.emotion)
-async def playEmotion(message: Message, state):
-    text = message.text
-
-    if text.lower() in ('выход', '/start'):
-        await state.finish()
-        await message.answer('Выход в Главное меню', reply_markup=noneKb)
-        return await show_homepage(message)
-
-    emotion = predict_emotions(text).items()
-    answer = '```\nПрогноз:'
-    for k, v in sorted(emotion, key=lambda x: x[1], reverse=True):
-        answer += f"\n-{k}:{' '*(11-len(k))}{100*v:.3f}%"
-    await message.answer(answer + '```', parse_mode='Markdown')
-
-
-# Сцена для тестовой модели
-@dp.message_handler(state=ModelPlay.test)
-async def playEmotion(message: Message, state):
-    if message.text.lower() in ('выход', '/start'):
-        await state.finish()
-        await message.answer('Выход в Главное меню', reply_markup=noneKb)
-        return await show_homepage(message)
 
 
 # Вывод страницы выбранной модели

@@ -10,7 +10,8 @@ Telegram bot also contains such well-known technologies as Natural Language Proc
 ### Supported models (currently):
 
 1. Russian Emotion Detection / [source](https://github.com/Djacon/russian-emotion-detection)
-2. ...
+2. Image Segmentation / [source](https://github.com/Djacon/image_segmentation)
+3. ...
 
 ### How to get access to this bot:
 You can test this bot at this link - [@DjaconBot](https://t.me/DjaconBot)

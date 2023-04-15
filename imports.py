@@ -6,6 +6,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from os import environ
 
+from keyboards import mainKb
+
 # Токен для получения доступа к боту
 TOKEN = environ['TOKEN']
 
@@ -24,13 +26,18 @@ class ModelEdit(StatesGroup):
     description = State()  # Описание
 
 
-# Сцена Модели (для запуска определенной модели)
-class ModelPlay(StatesGroup):
-    emotion = State()      # Russian Emotion Detection
-    test = State()         # Тестовый (в случае если модель не задана)
-
-
 # Игнорирование ошибки при неизмененном сообщении
 @dp.errors_handler(exception=MessageNotModified)
 async def message_not_modified_handler(*_):
     return True
+
+
+# Показать главное меню
+async def show_homepage(call, is_edit=False):
+    user = call.from_user.first_name
+    greet = (f'Приветствую вас, {user}!\n\nВыберите любую нейросеть из моего '
+             'портфолио, и я помогу вам протестировать ее работу:')
+    if is_edit:
+        await bot.answer_callback_query(call.id)
+        return await call.message.edit_text(greet, reply_markup=mainKb)
+    await call.answer(greet, reply_markup=mainKb)
