@@ -1,47 +1,16 @@
-from aiogram.types import Message
-from aiogram import Bot, Dispatcher, executor
-from aiogram.utils.exceptions import MessageNotModified
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram import executor
+
+from imports import *
+
+from keyboards import *
+from admin import *
 
 from emotion_detection import predict_emotions
 
-from os import environ
-from keyboards import *
 
-# Токен для получения доступа к боту
-TOKEN = environ['TOKEN']
-
-# Класс для работы с Ботом
-bot = Bot(TOKEN)
-
-# Создание хранилища для состояний сцен
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
-
-
-# Сцена Модели (для редактирования заголовка и описания)
-class ModelEdit(StatesGroup):
-    index = State()        # Индекс выбранной модели
-    title = State()        # Заголовок
-    description = State()  # Описание
-
-
-# Сцена Модели (для запуска определенной модели)
-class ModelPlay(StatesGroup):
-    emotion = State()      # Russian Emotion Detection
-    test = State()         # Тестовый (в случае если модель не задана)
-
-
-# Игнорирование ошибки при неизмененном сообщении
-@dp.errors_handler(exception=MessageNotModified)
-async def message_not_modified_handler(*_):
-    return True
-
-
-# Проверить имеет ли пользователь права Администратора
-def isAdmin(message) -> bool:
-    return message.from_user.id in [915782472]
+NO_ROOT_MSG = ('Упс, похоже у вас недостаточно прав чтобы воспользоваться'
+               ' ботом, пожалуйста напишите @Djacon, чтобы получить'
+               ' доступ ко всевозможным функциям')
 
 
 # Показать главное меню
@@ -61,14 +30,24 @@ async def start(message: Message):
     await show_homepage(message)
 
 
+def userInDatabase(message) -> bool:
+    return True  # Временный доступ для всех пользователей
+    return message.from_user.id in USER_DB.getUsers()
+
+
 # Запуск выбранной нейросети
 @dp.callback_query_handler(lambda c: c.data.startswith('open'))
 async def open_model_playground(call):
     message = call.message
+
     index = int(call.data.split('-')[1])
 
     await message.delete()
     await bot.answer_callback_query(call.id)
+
+    if not userInDatabase(call):
+        await ModelPlay.test.set()
+        return await message.answer(NO_ROOT_MSG, reply_markup=exitKb)
 
     if index == 0:  # Emotion detection
         await message.answer('Введите текст:', reply_markup=exitKb)
