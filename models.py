@@ -9,7 +9,7 @@ from aiogram.utils.exceptions import FileIsTooBig
 from keyboards import exitKb, noneKb
 from admin import IS_LIMIT_MODE
 
-# from emotion_detection import predict_emotions
+from emotion_detection import predict_emotions
 from image_segmentation import segment_photo, segment_video
 
 
