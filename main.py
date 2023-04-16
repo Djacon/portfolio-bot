@@ -152,31 +152,6 @@ async def back_to_homepage(call):
     await show_homepage(call, is_edit=True)
 
 
-# from aiogram.dispatcher.filters import Text
-# from random import random
-
-
-# # Print iterations progress
-# def progressBar(iteration, total, length=15):
-#     percent = '{0:.1f}'.format(100 * (iteration / float(total)))
-#     filledLength = int(length * iteration // total)
-#     bar = '█' * filledLength + '-' * (length - filledLength)
-#     return f'`Загрузка: |{bar}| {percent}% ({iteration}/{total})`'
-
-
-# @dp.message_handler(Text(equals='Загрузка', ignore_case=True))
-# async def animation_handler(message):
-#     size = 228
-#     progress = progressBar(0, size)
-#     bar = await message.answer(progress)
-#     for i in range(size):
-#         s = 0
-#         for _ in range(1_000_000):
-#             s += random()
-#         progress = progressBar(i+1, size)
-#         await bar.edit_text(progress, parse_mode="MarkdownV2")
-
-
 # Запуск бота
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
