@@ -7,7 +7,6 @@ from database import USER_DB
 from aiogram.utils.exceptions import FileIsTooBig
 
 from keyboards import exitKb, noneKb
-from admin import IS_LIMIT_MODE
 
 from emotion_detection import predict_emotions
 from image_segmentation import segment_photo, segment_video
@@ -19,7 +18,7 @@ NO_ROOT_MSG = ('Упс, похоже у вас недостаточно прав
 
 
 def userInDatabase(message) -> bool:
-    if IS_LIMIT_MODE:
+    if USER_DB.IS_LIMIT_MODE:
         return message.from_user.id in USER_DB.getUsers()
     return True
 

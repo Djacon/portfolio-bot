@@ -2,9 +2,6 @@ from imports import Message, dp
 from database import DB, USER_DB
 
 
-IS_LIMIT_MODE = True
-
-
 def isAdmin(message) -> bool:
     return message.from_user.id == 915782472
 
@@ -77,6 +74,5 @@ async def users(message: Message):
         await message.answer('Извините, команда доступна только админу!')
         return
 
-    global IS_LIMIT_MODE
-    IS_LIMIT_MODE = not IS_LIMIT_MODE
-    await message.answer(f"Режим изменен: {IS_LIMIT_MODE}")
+    USER_DB.IS_LIMIT_MODE = not USER_DB.IS_LIMIT_MODE
+    await message.answer(f"Режим изменен: {USER_DB.IS_LIMIT_MODE}")

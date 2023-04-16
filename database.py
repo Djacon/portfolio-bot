@@ -44,6 +44,7 @@ class USERS:
     def __init__(self, filename: str):
         self.filename = filename
         self._users = []
+        self.IS_LIMIT_MODE = True
         try:
             with open(filename, 'r', encoding='utf-8') as f:
                 self._users = json.load(f)
