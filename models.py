@@ -1,8 +1,10 @@
-from requests import get as rget
+from os import remove
 
-from imports import Message, State, StatesGroup, TOKEN
+from imports import Message, State, StatesGroup
 from imports import dp, bot, show_homepage
 from database import USER_DB
+
+from aiogram.utils.exceptions import FileIsTooBig
 
 from keyboards import exitKb, noneKb
 
@@ -90,23 +92,39 @@ async def playEmotion(message: Message, state):
         else:
             return
 
-    if message.content_type == 'photo':
-        file = await message.photo[-1].get_file()
-        await file.download()
+    try:
+        if message.content_type == 'photo':
+            file = await message.photo[-1].get_file()
+            await file.download()
 
-        img_path = file['file_path']
+            img_path = file['file_path']
 
-        segment_photo(img_path)
+            segment_photo(img_path)
 
-        with open(img_path, 'rb') as image:
-            await message.answer_photo(image)
+            with open(img_path, 'rb') as image:
+                await message.answer_photo(image)
 
-    elif message.content_type == 'video':
-        file = await message.video.get_file()
-        await file.download()
+            remove(img_path)
 
-        vid_path = file['file_path']
-        new_path = segment_video(vid_path)
+        elif message.content_type == 'video':
+            file = await message.video.get_file()
+            await file.download()
 
-        with open(new_path, 'rb') as video:
-            await message.answer_video(video)
+            vid_path = file['file_path']
+
+            bar = await message.answer('Загрузка...')
+            for progress, is_end in segment_video(vid_path):
+                if is_end:
+                    await bar.edit_text('Загрузка завершена!')
+                    break
+                await bar.edit_text(progress, parse_mode='MarkdownV2')
+
+            new_path = progress
+            with open(new_path, 'rb') as video:
+                await message.answer_video(video)
+
+            remove(vid_path)
+            remove(new_path)
+
+    except FileIsTooBig:
+        await message.reply('Файл слишком большой!')

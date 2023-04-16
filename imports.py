@@ -1,6 +1,6 @@
 from aiogram.types import Message
 from aiogram import Bot, Dispatcher
-from aiogram.utils.exceptions import MessageNotModified
+from aiogram.utils.exceptions import MessageNotModified, RetryAfter
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
@@ -29,6 +29,12 @@ class ModelEdit(StatesGroup):
 # Игнорирование ошибки при неизмененном сообщении
 @dp.errors_handler(exception=MessageNotModified)
 async def message_not_modified_handler(*_):
+    return True
+
+
+# Игнорирование ошибки при большом кол-ве запросов
+@dp.errors_handler(exception=RetryAfter)
+async def exception_handler(*_):
     return True
 
 
