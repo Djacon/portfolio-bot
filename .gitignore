@@ -4,9 +4,11 @@
 # Pycache
 __pycache__
 
-# Model
+# Models
+yolov8s.pt
 yolov8s-seg.pt
 
 # Custom Folders
 photos/
 videos/
+animations/

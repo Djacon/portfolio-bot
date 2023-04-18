@@ -21,8 +21,8 @@ COLORS = [tuple(int(c[i:i+2], 16) for i in (4, 2, 0))
 
 MAX_ACCESS_FRAMES = 300
 
-
-model = YOLO('yolov8s-seg.pt')
+model = YOLO('yolov8s.pt')
+model_seg = YOLO('yolov8s-seg.pt')
 
 
 def overlay(image, mask, color, alpha=.5):
@@ -65,7 +65,7 @@ def segment_result(result, with_mask=False):
 
 
 def segment_photo(img_path):
-    result = model(img_path, conf=.5, line_thickness=2)[0]
+    result = model_seg(img_path, conf=.5, line_thickness=2)[0]
     image = segment_result(result, with_mask=True)
     cv2.imwrite(img_path, image)
 
@@ -89,11 +89,11 @@ def segment_video(vid_path):
     if FRAMES > MAX_ACCESS_FRAMES:
         raise FileIsTooBig(f'Видео содержит слишком много кадров ({FRAMES} > {MAX_ACCESS_FRAMES})')  # noqa
 
-    new_path = 'videos/' + vid_path.split('/')[1].split('.')[0] + '_seg.mp4'
+    new_path = f"videos/{vid_path.split('/')[1].split('.')[0]}_seg.mp4"
     cap_out = cv2.VideoWriter(new_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS,
                               (frame.shape[1], frame.shape[0]))
 
-    frames = model.predict(vid_path, stream=True, conf=.5,  line_thickness=2)
+    frames = model.predict(vid_path, stream=True, conf=.5, line_thickness=2)
 
     for i, result in enumerate(frames):
         image = segment_result(result)
@@ -109,7 +109,6 @@ def segment_video(vid_path):
 
 def segment_gif(vid_path):
     cap = cv2.VideoCapture(vid_path)
-    _, frame = cap.read()
 
     FRAMES = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -118,7 +117,7 @@ def segment_gif(vid_path):
     if FRAMES > MAX_ACCESS_FRAMES:
         raise FileIsTooBig(f'Видео содержит слишком много кадров ({FRAMES} > {MAX_ACCESS_FRAMES})')  # noqa
 
-    new_path = 'videos/' + vid_path.split('/')[1].split('.')[0] + '_seg.gif'
+    new_path = f"animations/{vid_path.split('/')[1].split('.')[0]}_seg.gif"
 
     frames = model.predict(vid_path, stream=True, conf=.5,  line_thickness=2)
 
