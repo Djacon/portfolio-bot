@@ -12,3 +12,6 @@ yolov8s-seg.pt
 photos/
 videos/
 animations/
+
+# Examples
+bus.jpg

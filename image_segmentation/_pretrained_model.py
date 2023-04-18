@@ -65,7 +65,7 @@ def segment_result(result, with_mask=False):
 
 
 def segment_photo(img_path):
-    result = model_seg(img_path, conf=.5, line_thickness=2)[0]
+    result = model_seg(img_path, conf=.5, line_thickness=2, verbose=False)[0]
     image = segment_result(result, with_mask=True)
     cv2.imwrite(img_path, image)
 
@@ -93,7 +93,7 @@ def segment_video(vid_path):
     cap_out = cv2.VideoWriter(new_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS,
                               (frame.shape[1], frame.shape[0]))
 
-    frames = model.predict(vid_path, stream=True, conf=.5, line_thickness=2)
+    frames = model.predict(vid_path, stream=True, conf=.5, line_thickness=2, verbose=False)  # noqa
 
     for i, result in enumerate(frames):
         image = segment_result(result)
@@ -119,7 +119,7 @@ def segment_gif(vid_path):
 
     new_path = f"animations/{vid_path.split('/')[1].split('.')[0]}_seg.gif"
 
-    frames = model.predict(vid_path, stream=True, conf=.5,  line_thickness=2)
+    frames = model.predict(vid_path, stream=True, conf=.5,  line_thickness=2, verbose=False)  # noqa
 
     with imageio.get_writer(new_path, mode='I') as writer:
         for i, result in enumerate(frames):
@@ -131,3 +131,12 @@ def segment_gif(vid_path):
                 yield (progress, 0)
 
     yield (new_path, 1)
+
+
+def test():
+    result = model(conf=.5, line_thickness=2, verbose=False)[0]
+    segment_result(result)
+    print('\n>>> Image Model successfully initialized! <<<\n')
+
+
+test()

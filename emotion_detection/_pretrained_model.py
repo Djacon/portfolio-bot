@@ -24,3 +24,11 @@ def predict_emotions(text):
     for i in range(len(pred[0].tolist())):
         emotions_list[LABELS[i]] = pred[0].tolist()[i]
     return emotions_list
+
+
+def test():
+    predict_emotions('I am so happy now!')
+    print('\n>>> Emotion Detection successfully initialized! <<<\n')
+
+
+test()
