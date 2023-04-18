@@ -9,7 +9,7 @@ from aiogram.utils.exceptions import FileIsTooBig
 from keyboards import exitKb, noneKb
 
 from emotion_detection import predict_emotions
-from image_segmentation import segment_photo, segment_video
+from image_segmentation import segment_photo, segment_video, segment_gif
 
 
 NO_ROOT_MSG = ('Упс, похоже у вас недостаточно прав чтобы воспользоваться'
@@ -100,7 +100,11 @@ async def playEmotion(message: Message, state):
 
             img_path = file['file_path']
 
+            bar = await message.answer('Загрузка...')
+
             segment_photo(img_path)
+
+            await bar.edit_text('Загрузка завершена!')
 
             with open(img_path, 'rb') as image:
                 await message.answer_photo(image)
@@ -111,10 +115,10 @@ async def playEmotion(message: Message, state):
             file = await message.video.get_file()
             await file.download()
 
-            vid_path = file['file_path']
+            old_path = file['file_path']
 
             bar = await message.answer('Загрузка...')
-            for progress, is_end in segment_video(vid_path):
+            for progress, is_end in segment_video(old_path):
                 if is_end:
                     await bar.edit_text('Загрузка завершена!')
                     break
@@ -124,8 +128,30 @@ async def playEmotion(message: Message, state):
             with open(new_path, 'rb') as video:
                 await message.answer_video(video)
 
-            remove(vid_path)
+            remove(old_path)
             remove(new_path)
 
-    except FileIsTooBig:
-        await message.reply('Файл слишком большой!')
+        elif message.content_type == 'animation':
+            file = await message.animation.get_file()
+            await file.download()
+
+            old_path = file['file_path']
+
+            bar = await message.answer('Загрузка...')
+            for progress, is_end in segment_gif(old_path):
+                if is_end:
+                    await bar.edit_text('Загрузка завершена!')
+                    break
+                await bar.edit_text(progress, parse_mode='MarkdownV2')
+
+            new_path = progress
+            with open(new_path, 'rb') as gif:
+                await message.answer_animation(gif)
+
+            remove(old_path)
+            remove(new_path)
+
+    except FileIsTooBig as err:
+        if str(err) == 'File is too big':
+            err = 'Файл слишком большой! (>20МБ)'
+        await message.reply(err)
