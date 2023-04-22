@@ -111,6 +111,10 @@ async def playEmotion(message: Message, state):
 
             remove(img_path)
 
+        # elif message.content_type in ('video', 'animation'):
+        #     # Временное избежание обработки больших роликов
+        #     await message.reply('Сегментация видео/gif временно недоступно')
+
         elif message.content_type == 'video':
             file = await message.video.get_file()
             await file.download()

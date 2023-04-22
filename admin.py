@@ -14,6 +14,7 @@ async def users(message: Message):
     info = ('Bot Info:\n'
             f"-Users in DB: {USER_DB.userCount()}"
             f"\n-Models in DB: {DB.modelCount()}"
+            f"\n-Is Limit Mode: {USER_DB.IS_LIMIT_MODE}"
             "\n\nAdmin Commands:"
             "\n/useradd, /userdel, /getusers, /limitmode")
     await message.answer(info)
