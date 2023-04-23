@@ -82,6 +82,63 @@ async def playEmotion(message: Message, state):
     await message.answer(answer + '```', parse_mode='Markdown')
 
 
+async def download_and_get_file_path(file):
+    file = await file.get_file()
+    await file.download()
+    return file['file_path']
+
+
+async def handle_image(message: Message):
+    img_path = await download_and_get_file_path(message.photo[-1])
+
+    bar = await message.answer('Загрузка...')
+
+    segment_photo(img_path)
+
+    await bar.edit_text('Загрузка завершена!')
+
+    with open(img_path, 'rb') as image:
+        await message.answer_photo(image)
+
+    remove(img_path)
+
+
+async def handle_video(message: Message):
+    old_path = await download_and_get_file_path(message.video)
+
+    bar = await message.answer('Загрузка...')
+    for progress, is_end in segment_video(old_path):
+        if is_end:
+            await bar.edit_text('Загрузка завершена!')
+            break
+        await bar.edit_text(progress, parse_mode='MarkdownV2')
+
+    new_path = progress
+    with open(new_path, 'rb') as video:
+        await message.answer_video(video)
+
+    remove(old_path)
+    remove(new_path)
+
+
+async def handle_gif(message: Message):
+    old_path = await download_and_get_file_path(message.animation)
+
+    bar = await message.answer('Загрузка...')
+    for progress, is_end in segment_gif(old_path):
+        if is_end:
+            await bar.edit_text('Загрузка завершена!')
+            break
+        await bar.edit_text(progress, parse_mode='MarkdownV2')
+
+    new_path = progress
+    with open(new_path, 'rb') as gif:
+        await message.answer_animation(gif)
+
+    remove(old_path)
+    remove(new_path)
+
+
 # Сцена для тестовой модели
 @dp.message_handler(state=ModelPlay.image, content_types='any')
 async def playEmotion(message: Message, state):
@@ -95,65 +152,17 @@ async def playEmotion(message: Message, state):
 
     try:
         if message.content_type == 'photo':
-            file = await message.photo[-1].get_file()
-            await file.download()
+            await handle_image(message)
 
-            img_path = file['file_path']
+        elif message.content_type == 'video':
+            await handle_video(message)
 
-            bar = await message.answer('Загрузка...')
-
-            segment_photo(img_path)
-
-            await bar.edit_text('Загрузка завершена!')
-
-            with open(img_path, 'rb') as image:
-                await message.answer_photo(image)
-
-            remove(img_path)
+        elif message.content_type == 'animation':
+            await handle_gif(message)
 
         # elif message.content_type in ('video', 'animation'):
         #     # Временное избежание обработки больших роликов
         #     await message.reply('Сегментация видео/gif временно недоступно')
-
-        elif message.content_type == 'video':
-            file = await message.video.get_file()
-            await file.download()
-
-            old_path = file['file_path']
-
-            bar = await message.answer('Загрузка...')
-            for progress, is_end in segment_video(old_path):
-                if is_end:
-                    await bar.edit_text('Загрузка завершена!')
-                    break
-                await bar.edit_text(progress, parse_mode='MarkdownV2')
-
-            new_path = progress
-            with open(new_path, 'rb') as video:
-                await message.answer_video(video)
-
-            remove(old_path)
-            remove(new_path)
-
-        elif message.content_type == 'animation':
-            file = await message.animation.get_file()
-            await file.download()
-
-            old_path = file['file_path']
-
-            bar = await message.answer('Загрузка...')
-            for progress, is_end in segment_gif(old_path):
-                if is_end:
-                    await bar.edit_text('Загрузка завершена!')
-                    break
-                await bar.edit_text(progress, parse_mode='MarkdownV2')
-
-            new_path = progress
-            with open(new_path, 'rb') as gif:
-                await message.answer_animation(gif)
-
-            remove(old_path)
-            remove(new_path)
 
     except FileIsTooBig as err:
         if str(err) == 'File is too big':
