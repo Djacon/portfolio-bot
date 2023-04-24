@@ -88,13 +88,21 @@ async def download_and_get_file_path(file):
     return file['file_path']
 
 
+async def do_loading_and_return_new_path(message, segment, path):
+    bar = await message.answer('Загрузка...')
+    for progress, is_end in segment(path):
+        if is_end:
+            await bar.edit_text('Загрузка завершена!')
+            break
+        await bar.edit_text(progress, parse_mode='MarkdownV2')
+    return progress  # new path
+
+
 async def handle_image(message: Message):
     img_path = await download_and_get_file_path(message.photo[-1])
 
     bar = await message.answer('Загрузка...')
-
     segment_photo(img_path)
-
     await bar.edit_text('Загрузка завершена!')
 
     with open(img_path, 'rb') as image:
@@ -105,15 +113,8 @@ async def handle_image(message: Message):
 
 async def handle_video(message: Message):
     old_path = await download_and_get_file_path(message.video)
-
-    bar = await message.answer('Загрузка...')
-    for progress, is_end in segment_video(old_path):
-        if is_end:
-            await bar.edit_text('Загрузка завершена!')
-            break
-        await bar.edit_text(progress, parse_mode='MarkdownV2')
-
-    new_path = progress
+    new_path = await do_loading_and_return_new_path(message, segment_video,
+                                                    old_path)
     with open(new_path, 'rb') as video:
         await message.answer_video(video)
 
@@ -123,15 +124,8 @@ async def handle_video(message: Message):
 
 async def handle_gif(message: Message):
     old_path = await download_and_get_file_path(message.animation)
-
-    bar = await message.answer('Загрузка...')
-    for progress, is_end in segment_gif(old_path):
-        if is_end:
-            await bar.edit_text('Загрузка завершена!')
-            break
-        await bar.edit_text(progress, parse_mode='MarkdownV2')
-
-    new_path = progress
+    new_path = await do_loading_and_return_new_path(message, segment_gif,
+                                                    old_path)
     with open(new_path, 'rb') as gif:
         await message.answer_animation(gif)
 

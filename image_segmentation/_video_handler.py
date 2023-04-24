@@ -1,9 +1,9 @@
 
 
-# Класс для обработки изображений/видео в виде очередей
-class VideoHandler:
+# Класс для обработки файлов пользователей с помощью очереди
+class FileHandler:
     def __init__(self):
-        self.videos = []
+        self._tasks = []
 
-    def append(video_path):
-        pass
+    def append(self, task):
+        self._tasks.append(task)
