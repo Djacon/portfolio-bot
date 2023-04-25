@@ -20,7 +20,7 @@ COLORS = [tuple(int(c[i:i+2], 16) for i in (4, 2, 0))
           for c in COLORS]  # hex2rgb
 
 MAX_ACCESS_FRAMES = 300
-PRINT_EACH_ITER = 10
+PRINT_EACH_ITER = 5
 
 model = YOLO('yolov8s.pt')
 model_seg = YOLO('yolov8s-seg.pt')

@@ -1,6 +1,6 @@
 from keyboards import getCancelKeyboard
 
-MAX_VALID_QUERIES = 10
+MAX_COUNT_QUERIES = 10
 
 
 # Класс для обработки запросов пользователей с помощью очередей
@@ -13,7 +13,7 @@ class QueryHandler:
         self.is_active = False
 
     async def add(self, task, call):
-        if len(self._tasks) >= MAX_VALID_QUERIES:
+        if len(self._tasks) >= MAX_COUNT_QUERIES:
             return
 
         self._tasks.append(task)
