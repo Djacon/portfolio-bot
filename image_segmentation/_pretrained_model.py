@@ -20,7 +20,7 @@ COLORS = [tuple(int(c[i:i+2], 16) for i in (4, 2, 0))
           for c in COLORS]  # hex2rgb
 
 MAX_ACCESS_FRAMES = 300
-PRINT_EACH_ITER = 5
+PRINT_EACH_ITER = 10
 
 model = YOLO('yolov8s.pt')
 model_seg = YOLO('yolov8s-seg.pt')
@@ -68,7 +68,11 @@ def segment_result(result, with_mask=False):
 def segment_photo(img_path):
     result = model_seg(img_path, conf=.5, line_thickness=2, verbose=False)[0]
     image = segment_result(result, with_mask=True)
-    cv2.imwrite(img_path, image)
+
+    filename = img_path.split('/')[1].split('.')
+    new_path = f"photos/{filename[0]}_seg.{filename[1]}"
+    cv2.imwrite(new_path, image)
+    yield (new_path, 1)
 
 
 def progressBar(iteration, total, length=15):

@@ -2,8 +2,11 @@ from imports import Message, dp
 from database import DB, USER_DB
 
 
+ADMIN_ID = 915782472
+
+
 def isAdmin(message) -> bool:
-    return message.from_user.id == 915782472
+    return message.from_user.id == ADMIN_ID
 
 
 @dp.message_handler(commands=['info'])

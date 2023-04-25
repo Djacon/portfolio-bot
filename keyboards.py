@@ -55,6 +55,11 @@ def getAddKeyboard():
     return InlineKeyboardMarkup(resize_keyboard=True).add(yes, no)
 
 
+def getCancelKeyboard(i: int = 0):
+    cancel = InlineKeyboardButton('Отмена', callback_data=f'cancel-{i}')
+    return InlineKeyboardMarkup(resize_keyboard=True).add(cancel)
+
+
 addKb = getAddKeyboard()
 
 mainKb = InlineKeyboardButton('Показать нейросети', callback_data='models')

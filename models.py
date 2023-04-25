@@ -3,10 +3,11 @@ from os import remove
 from imports import Message, State, StatesGroup
 from imports import dp, bot, show_homepage
 from database import USER_DB
+from queryhandler import QUEUE
 
-from aiogram.utils.exceptions import FileIsTooBig
+from aiogram.utils.exceptions import FileIsTooBig, BadRequest
 
-from keyboards import exitKb, noneKb
+from keyboards import exitKb, noneKb, getCancelKeyboard
 
 from emotion_detection import predict_emotions
 from image_segmentation import segment_photo, segment_video, segment_gif
@@ -82,55 +83,58 @@ async def playEmotion(message: Message, state):
     await message.answer(answer + '```', parse_mode='Markdown')
 
 
+##############################################################################
+
 async def download_and_get_file_path(file):
     file = await file.get_file()
     await file.download()
     return file['file_path']
 
 
-async def do_loading_and_return_new_path(message, segment, path):
-    bar = await message.answer('Загрузка...')
-    for progress, is_end in segment(path):
+async def handle(file, segment, bar, reply, answer):
+    old_path = await download_and_get_file_path(file)
+    for progress, is_end in segment(old_path):
         if is_end:
             await bar.edit_text('Загрузка завершена!')
             break
-        await bar.edit_text(progress, parse_mode='MarkdownV2')
-    return progress  # new path
+        await bar.edit_text(progress, parse_mode='Markdown')
+                            # reply_markup=getCancelKeyboard())
 
-
-async def handle_image(message: Message):
-    img_path = await download_and_get_file_path(message.photo[-1])
-
-    bar = await message.answer('Загрузка...')
-    segment_photo(img_path)
-    await bar.edit_text('Загрузка завершена!')
-
-    with open(img_path, 'rb') as image:
-        await message.answer_photo(image)
-
-    remove(img_path)
-
-
-async def handle_video(message: Message):
-    old_path = await download_and_get_file_path(message.video)
-    new_path = await do_loading_and_return_new_path(message, segment_video,
-                                                    old_path)
-    with open(new_path, 'rb') as video:
-        await message.answer_video(video)
+    try:
+        with open(progress, 'rb') as file:
+            await reply(file)
+    except BadRequest:
+        with open(progress, 'rb') as file:
+            await answer(file)
+    await bar.delete()
 
     remove(old_path)
-    remove(new_path)
+    remove(progress)
 
 
-async def handle_gif(message: Message):
-    old_path = await download_and_get_file_path(message.animation)
-    new_path = await do_loading_and_return_new_path(message, segment_gif,
-                                                    old_path)
-    with open(new_path, 'rb') as gif:
-        await message.answer_animation(gif)
+async def handle_image(message: Message, bar):
+    await handle(message.photo[-1], segment_photo, bar,
+                 message.reply_photo, bar.answer_photo)
 
-    remove(old_path)
-    remove(new_path)
+
+async def handle_video(message: Message, bar):
+    await handle(message.video, segment_video, bar,
+                 message.reply_video, bar.answer_video)
+
+
+async def handle_gif(message: Message, bar):
+    await handle(message.animation, segment_gif, bar,
+                 message.reply_animation, bar.answer_animation)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('cancel-'),
+                           state=ModelPlay.image)
+async def cancel_task(call):
+    ind = int(call.data.split('-')[1])
+    if ind == 0:
+        return
+
+    await QUEUE.cancel(ind)
 
 
 # Сцена для тестовой модели
@@ -146,17 +150,13 @@ async def playEmotion(message: Message, state):
 
     try:
         if message.content_type == 'photo':
-            await handle_image(message)
+            await QUEUE.add(handle_image, message)
 
         elif message.content_type == 'video':
-            await handle_video(message)
+            await QUEUE.add(handle_video, message)
 
         elif message.content_type == 'animation':
-            await handle_gif(message)
-
-        # elif message.content_type in ('video', 'animation'):
-        #     # Временное избежание обработки больших роликов
-        #     await message.reply('Сегментация видео/gif временно недоступно')
+            await QUEUE.add(handle_gif, message)
 
     except FileIsTooBig as err:
         if str(err) == 'File is too big':
