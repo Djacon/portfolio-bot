@@ -28,21 +28,33 @@ class QueryHandler:
             await self._iterative_call()
 
     async def cancel(self, call_id):
-        for i in range(len(self._calls)):
+        i = 0
+        while i < len(self._bars):
             if self._calls[i].message_id == call_id:
                 self._tasks.pop(i)
                 self._calls.pop(i)
                 bar = self._bars.pop(i)
                 return await bar.edit_text('Отменено')
+            i += 1
+
+    async def update_bars(self):
+        i = 0
+        while i < len(self._bars):
+            await self._bars[i].edit_text(
+                f'Запрос поставлен в очередь: {i+1}',
+                reply_markup=getCancelKeyboard(self._calls[i].message_id))
+            i += 1
 
     async def _iterative_call(self):
         self.is_active = True
 
-        while len(self._tasks):
+        while len(self._bars):
             task = self._tasks.pop(0)
             call = self._calls.pop(0)
             bar = self._bars.pop(0)
             await task(call, bar)
+
+            await self.update_bars()
 
         self.is_active = False
 

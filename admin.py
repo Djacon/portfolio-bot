@@ -1,6 +1,8 @@
 from imports import Message, dp
 from database import DB, USER_DB
 
+from queryhandler import QUEUE
+
 
 ADMIN_ID = 915782472
 
@@ -21,6 +23,20 @@ async def users(message: Message):
             "\n\nAdmin Commands:"
             "\n/useradd, /userdel, /getusers, /limitmode")
     await message.answer(info)
+
+
+@dp.message_handler(commands=['change'])
+async def users(message: Message):
+    if not isAdmin(message):
+        await message.answer('Извините, команда доступна только админу!')
+        return
+
+    QUEUE._tasks = []
+    QUEUE._calls = []
+    QUEUE._bars = []
+    QUEUE.is_active = False
+
+    await message.answer('Очередь очищена!')
 
 
 @dp.message_handler(commands=['useradd'])

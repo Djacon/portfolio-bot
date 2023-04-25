@@ -7,7 +7,7 @@ from queryhandler import QUEUE
 
 from aiogram.utils.exceptions import FileIsTooBig, BadRequest
 
-from keyboards import exitKb, noneKb, getCancelKeyboard
+from keyboards import exitKb, noneKb
 
 from emotion_detection import predict_emotions
 from image_segmentation import segment_photo, segment_video, segment_gif
@@ -66,6 +66,15 @@ async def playEmotion(message: Message, state):
         return await show_homepage(message)
 
 
+async def handle_emotions(message: Message, bar):
+    text = message.text
+    emotion = predict_emotions(text).items()
+    answer = '```\nПрогноз:'
+    for k, v in sorted(emotion, key=lambda x: x[1], reverse=True):
+        answer += f"\n-{k}:{' '*(11-len(k))}{100*v:.3f}%"
+    await bar.edit_text(answer + '```', parse_mode='Markdown')
+
+
 # Сцена для тестирования emotion_detection модели
 @dp.message_handler(state=ModelPlay.emotion)
 async def playEmotion(message: Message, state):
@@ -76,11 +85,7 @@ async def playEmotion(message: Message, state):
         await message.answer('Выход в Главное меню', reply_markup=noneKb)
         return await show_homepage(message)
 
-    emotion = predict_emotions(text).items()
-    answer = '```\nПрогноз:'
-    for k, v in sorted(emotion, key=lambda x: x[1], reverse=True):
-        answer += f"\n-{k}:{' '*(11-len(k))}{100*v:.3f}%"
-    await message.answer(answer + '```', parse_mode='Markdown')
+    await QUEUE.add(handle_emotions, message)
 
 
 ##############################################################################
@@ -92,24 +97,29 @@ async def download_and_get_file_path(file):
 
 
 async def handle(file, segment, bar, reply, answer):
-    old_path = await download_and_get_file_path(file)
-    for progress, is_end in segment(old_path):
-        if is_end:
-            await bar.edit_text('Загрузка завершена!')
-            break
-        await bar.edit_text(progress, parse_mode='Markdown')
-                            # reply_markup=getCancelKeyboard())
-
     try:
-        with open(progress, 'rb') as file:
-            await reply(file)
-    except BadRequest:
-        with open(progress, 'rb') as file:
-            await answer(file)
-    await bar.delete()
+        old_path = await download_and_get_file_path(file)
+        for progress, is_end in segment(old_path):
+            if is_end:
+                await bar.edit_text('Загрузка завершена!')
+                break
+            await bar.edit_text(progress, parse_mode='Markdown')
 
-    remove(old_path)
-    remove(progress)
+        try:
+            with open(progress, 'rb') as file:
+                await reply(file)
+        except BadRequest:
+            with open(progress, 'rb') as file:
+                await answer(file)
+        await bar.delete()
+
+        remove(old_path)
+        remove(progress)
+
+    except FileIsTooBig as err:
+        if str(err) == 'File is too big':
+            err = 'Файл слишком большой! (>20МБ)'
+        await bar.edit_text(err)
 
 
 async def handle_image(message: Message, bar):
@@ -131,15 +141,12 @@ async def handle_gif(message: Message, bar):
                            state=ModelPlay.image)
 async def cancel_task(call):
     ind = int(call.data.split('-')[1])
-    if ind == 0:
-        return
-
     await QUEUE.cancel(ind)
 
 
 # Сцена для тестовой модели
 @dp.message_handler(state=ModelPlay.image, content_types='any')
-async def playEmotion(message: Message, state):
+async def playImage(message: Message, state):
     if message.content_type == 'text':
         if message.text.lower() in ('выход', '/start'):
             await state.finish()
@@ -148,17 +155,11 @@ async def playEmotion(message: Message, state):
         else:
             return
 
-    try:
-        if message.content_type == 'photo':
-            await QUEUE.add(handle_image, message)
+    if message.content_type == 'photo':
+        await QUEUE.add(handle_image, message)
 
-        elif message.content_type == 'video':
-            await QUEUE.add(handle_video, message)
+    elif message.content_type == 'video':
+        await QUEUE.add(handle_video, message)
 
-        elif message.content_type == 'animation':
-            await QUEUE.add(handle_gif, message)
-
-    except FileIsTooBig as err:
-        if str(err) == 'File is too big':
-            err = 'Файл слишком большой! (>20МБ)'
-        await message.reply(err)
+    elif message.content_type == 'animation':
+        await QUEUE.add(handle_gif, message)
