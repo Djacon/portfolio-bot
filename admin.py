@@ -21,7 +21,7 @@ async def users(message: Message):
             f"\n-Models in DB: {DB.modelCount()}"
             f"\n-Is Limit Mode: {USER_DB.IS_LIMIT_MODE}"
             "\n\nAdmin Commands:"
-            "\n/useradd, /userdel, /getusers, /limitmode")
+            "\n/useradd, /userdel, /getusers, /limitmode, /change")
     await message.answer(info)
 
 

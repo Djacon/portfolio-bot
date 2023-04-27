@@ -99,6 +99,7 @@ async def download_and_get_file_path(file):
 async def handle(file, segment, bar, reply, answer):
     try:
         old_path = await download_and_get_file_path(file)
+        await bar.edit_text('Загрузка...')
         for progress, is_end in segment(old_path):
             if is_end:
                 await bar.edit_text('Загрузка завершена!')
